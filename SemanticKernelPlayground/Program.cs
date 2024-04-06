@@ -41,11 +41,11 @@ public class Program
 
     private static async Task TodoistPluginExamples(Kernel kernel)
     {
-        var prompt = kernel.CreateFunctionFromPrompt(@"{{TodoistPlugin.GetProjects}}
-for the given list project names in markdown bullet list
+        var getProjectsPrompt = kernel.CreateFunctionFromPrompt(@"{{TodoistPlugin.GetProjects}}
+for the given list project names in markdown bullet list. Preserve hierarchy
 Projects:");
-        var getTodoistProjects = await kernel.InvokeAsync(prompt);
-        Console.WriteLine(getTodoistProjects);
+        var getProjectsResult = await kernel.InvokeAsync(getProjectsPrompt);
+        Console.WriteLine(getProjectsResult);
     }
 
 

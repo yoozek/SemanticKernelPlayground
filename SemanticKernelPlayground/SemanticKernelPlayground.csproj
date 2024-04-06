@@ -12,6 +12,7 @@
       <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
       <PackageReference Include="Microsoft.SemanticKernel" Version="1.7.1" />
       <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.7.1-alpha" />
+      <PackageReference Include="Refit" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
