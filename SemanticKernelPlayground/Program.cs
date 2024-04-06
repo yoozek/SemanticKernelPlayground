@@ -2,6 +2,7 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Plugins.Core;
+using SemanticKernelPlayground.Plugins.Todoist;
 
 namespace SemanticKernelPlayground;
 
@@ -13,9 +14,12 @@ public class Program
             .AddJsonFile("appsettings.json", false)
             .Build();
 
-        var openAiKey = config.GetSection(nameof(OpenAi)).GetValue<string>(nameof(OpenAi.ApiKey))
-                        ?? throw new InvalidOperationException(nameof(OpenAi.ApiKey));
+        var openAiKey = config.GetSection(nameof(OpenAiConfig)).GetValue<string>(nameof(OpenAiConfig.ApiKey))
+                        ?? throw new InvalidOperationException(nameof(OpenAiConfig.ApiKey));
         
+        var todoistApiKey = config.GetSection(nameof(TodoistConfig)).GetValue<string>(nameof(TodoistConfig.ApiKey))
+                        ?? throw new InvalidOperationException(nameof(TodoistConfig.ApiKey));
+
         var builder = Kernel.CreateBuilder();
         builder.AddOpenAIChatCompletion(
          "gpt-3.5-turbo",
@@ -24,12 +28,24 @@ public class Program
 #pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         builder.Plugins.AddFromType<TimePlugin>();
         builder.Plugins.AddFromType<ConversationSummaryPlugin>();
+        builder.Plugins.AddFromObject(new TodoistPlugin(todoistApiKey));
 
         var kernel = builder.Build();
 
         //await HelloWorld(kernel);
         //await CurrentDayTimePluginExample(kernel);
         //await ConversationSummaryPluginExamples(kernel);
+
+        await TodoistPluginExamples(kernel);
+    }
+
+    private static async Task TodoistPluginExamples(Kernel kernel)
+    {
+        var prompt = kernel.CreateFunctionFromPrompt(@"{{TodoistPlugin.GetProjects}}
+for the given list project names in markdown bullet list
+Projects:");
+        var getTodoistProjects = await kernel.InvokeAsync(prompt);
+        Console.WriteLine(getTodoistProjects);
     }
 
 
@@ -60,9 +76,21 @@ One line TLDR with the fewest words.";
 
     private static async Task ConversationSummaryPluginExamples(Kernel kernel)
     {
+        var recipesPrompt = @"User background: 
+            {{ConversationSummaryPlugin.SummarizeConversation $input}}
+            Given this user's background, provide a list of relevant recipes.";
+
         string input = @"I'm a vegan in search of new recipes. 
 I love spicy food! Can you give me a list of breakfast 
 recipes that are vegan friendly?";
+
+        var suggestRecipes = kernel.CreateFunctionFromPrompt(recipesPrompt);
+        var suggestRecipesResult = await kernel.InvokeAsync(suggestRecipes,
+            new KernelArguments
+            {
+                { "input", input }
+            });
+        Console.WriteLine(suggestRecipesResult);
 
         var summarizeResult = await kernel.InvokeAsync(
             nameof(ConversationSummaryPlugin),
@@ -86,7 +114,7 @@ recipes that are vegan friendly?";
         Console.WriteLine(actionItemsResult);
     }
 
-    private record OpenAi(string ApiKey);
+    private record OpenAiConfig(string ApiKey);
 }
 
 #pragma warning restore SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
