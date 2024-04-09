@@ -26,8 +26,14 @@
         <None Update="appsettings.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="Plugins\IngredientsPlugin\ingredients.json">
+        <None Update="Plugins\ConvertCurrency\currencies.txt">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Plugins\Ingredients\ingredients.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Plugins\MusicConcert\concertdates.json">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
         <None Update="Plugins\MusicLibrary\musiclibrary.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
