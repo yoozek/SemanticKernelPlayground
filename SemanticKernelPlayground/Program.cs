@@ -1,9 +1,15 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Plugins.Core;
+using SemanticKernelPlayground.Plugins.IngredientsPlugin;
+using SemanticKernelPlayground.Plugins.MusicLibrary;
 using SemanticKernelPlayground.Plugins.Todoist;
 using SemanticKernelPlayground.Plugins.TodoList;
+using Serilog;
+using Serilog.Events;
 
 namespace SemanticKernelPlayground;
 
@@ -15,6 +21,19 @@ public class Program
             .AddJsonFile("appsettings.json", false)
             .Build();
 
+        var logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft.SemanticKernel", LogEventLevel.Debug)
+            .WriteTo.Console()
+            .CreateLogger();
+
+        var services = new ServiceCollection();
+
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddSerilog(logger));
+        services.AddSingleton(loggerFactory);
+        var serviceProvider = services.BuildServiceProvider();
+
+
         var openAiKey = config.GetSection(nameof(OpenAiConfig)).GetValue<string>(nameof(OpenAiConfig.ApiKey))
                         ?? throw new InvalidOperationException(nameof(OpenAiConfig.ApiKey));
         
@@ -22,6 +41,7 @@ public class Program
                         ?? throw new InvalidOperationException(nameof(TodoistConfig.ApiKey));
 
         var builder = Kernel.CreateBuilder();
+        builder.Services.AddSingleton(loggerFactory);
         builder.AddOpenAIChatCompletion(
          "gpt-3.5-turbo",
          openAiKey);
@@ -32,6 +52,7 @@ public class Program
 #pragma warning restore SKEXP0050
         builder.Plugins.AddFromObject(new TodoistPlugin(todoistApiKey));
         builder.Plugins.AddFromType<TodoListPlugin>();
+        builder.Plugins.AddFromType<MusicLibraryPlugin>();
 
         var kernel = builder.Build();
 
@@ -44,8 +65,62 @@ public class Program
 
         //await SuggestChordsPromptExample(kernel);
         //await TravelPluginsExample(kernel);
+        //await CompleteTaskExample(kernel);
+        //await MusicLibraryPluginExample(kernel);
+        //await IngredientsPluginExample(kernel);
 
 
+        await CombinePromptsWithPlugins(kernel);
+    }
+
+    private static async Task CombinePromptsWithPlugins(Kernel kernel)
+    {
+        string prompt = @"This is a list of music available to the user:
+    {{MusicLibraryPlugin.GetMusicLibrary}} 
+
+    This is a list of music the user has recently played:
+    {{MusicLibraryPlugin.GetRecentPlays}}
+
+    Based on their recently played music, suggest a song from
+    the list to play next";
+
+        var result = await kernel.InvokePromptAsync(prompt);
+        Console.WriteLine(result);
+    }
+
+    private static async Task IngredientsPluginExample(Kernel kernel)
+    {
+        kernel.ImportPluginFromType<IngredientsPlugin>();
+
+        string prompt = @"This is a list of ingredients available to the user:
+    {{IngredientsPlugin.GetIngredients}} 
+    
+    Please suggest a recipe the user could make with 
+    some of the ingredients they have available";
+
+        var result = await kernel.InvokePromptAsync(prompt);
+        Console.WriteLine(result);
+    }
+
+    private static async Task MusicLibraryPluginExample(Kernel kernel)
+    {
+        kernel.ImportPluginFromType<MusicLibraryPlugin>();
+        var result = await kernel.InvokeAsync(
+            "MusicLibraryPlugin",
+            "AddToRecentlyPlayed",
+            new()
+            {
+                ["artist"] = "Tiara",
+                ["song"] = "Danse",
+                ["genre"] = "French pop, electropop, pop"
+            }
+        );
+
+        Console.WriteLine(result);
+    }
+
+    private static async Task CompleteTaskExample(Kernel kernel)
+    {
         var result = await kernel.InvokeAsync<string>(
             "TodoListPlugin",
             "CompleteTask",
