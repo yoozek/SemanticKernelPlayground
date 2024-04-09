@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Planning.Handlebars;
 using Microsoft.SemanticKernel.Plugins.Core;
 using SemanticKernelPlayground.Plugins.IngredientsPlugin;
 using SemanticKernelPlayground.Plugins.MusicLibrary;
@@ -12,6 +13,9 @@ using Serilog;
 using Serilog.Events;
 
 namespace SemanticKernelPlayground;
+
+#pragma warning disable SKEXP0050
+#pragma warning disable SKEXP0060
 
 public class Program
 {
@@ -43,13 +47,11 @@ public class Program
         var builder = Kernel.CreateBuilder();
         builder.Services.AddSingleton(loggerFactory);
         builder.AddOpenAIChatCompletion(
-         "gpt-3.5-turbo",
+         "gpt-3.5-turbo-0125",
          openAiKey);
 
-#pragma warning disable SKEXP0050
         builder.Plugins.AddFromType<TimePlugin>();
         builder.Plugins.AddFromType<ConversationSummaryPlugin>();
-#pragma warning restore SKEXP0050
         builder.Plugins.AddFromObject(new TodoistPlugin(todoistApiKey));
         builder.Plugins.AddFromType<TodoListPlugin>();
         builder.Plugins.AddFromType<MusicLibraryPlugin>();
@@ -68,9 +70,26 @@ public class Program
         //await CompleteTaskExample(kernel);
         //await MusicLibraryPluginExample(kernel);
         //await IngredientsPluginExample(kernel);
+        //await CombinePromptsWithPlugins(kernel);
 
 
-        await CombinePromptsWithPlugins(kernel);
+        // Create new kernel to do not include plugins for this example (reduces prompt for planner)
+        builder = Kernel.CreateBuilder();
+        builder.Services.AddSingleton(loggerFactory);
+        builder.AddOpenAIChatCompletion(
+            "gpt-3.5-turbo-0125",
+            openAiKey);
+        kernel = builder.Build();
+
+        kernel.ImportPluginFromPromptDirectory("Plugins");
+        var planner = new HandlebarsPlanner(new HandlebarsPlannerOptions { AllowLoops = true });
+        
+        string goal = @"What ingredients is the user missing from their 
+   current ingredients list to make a recipe for blueberry muffins";
+
+        var plan = await planner.CreatePlanAsync(kernel, goal);
+        var result = await plan.InvokeAsync(kernel);
+        Console.WriteLine(result);
     }
 
     private static async Task CombinePromptsWithPlugins(Kernel kernel)
