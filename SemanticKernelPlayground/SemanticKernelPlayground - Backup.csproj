@@ -24,4 +24,9 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Prompts\TravelPlugins\SuggestActivities\" />
+      <Folder Include="Prompts\TravelPlugins\SuggestDestinations\" />
+    </ItemGroup>
+
 </Project>
