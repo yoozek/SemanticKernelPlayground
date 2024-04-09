@@ -3,6 +3,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Plugins.Core;
 using SemanticKernelPlayground.Plugins.Todoist;
+using SemanticKernelPlayground.Plugins.TodoList;
 
 namespace SemanticKernelPlayground;
 
@@ -30,6 +31,7 @@ public class Program
         builder.Plugins.AddFromType<ConversationSummaryPlugin>();
 #pragma warning restore SKEXP0050
         builder.Plugins.AddFromObject(new TodoistPlugin(todoistApiKey));
+        builder.Plugins.AddFromType<TodoListPlugin>();
 
         var kernel = builder.Build();
 
@@ -41,7 +43,19 @@ public class Program
         // APL-2005 https://learn.microsoft.com/en-us/training/paths/develop-ai-agents-azure-open-ai-semantic-kernel-sdk/
 
         //await SuggestChordsPromptExample(kernel);
+        //await TravelPluginsExample(kernel);
 
+
+        var result = await kernel.InvokeAsync<string>(
+            "TodoListPlugin",
+            "CompleteTask",
+            new() { { "task", "Buy groceries" } }
+        );
+        Console.WriteLine(result);
+    }
+
+    private static async Task TravelPluginsExample(Kernel kernel)
+    {
         var prompts = kernel.ImportPluginFromPromptDirectory("Prompts/TravelPlugins");
 
         ChatHistory history = [];
@@ -58,6 +72,17 @@ Lubimy zwiedzać miasto i jeść pyszne jedzenie";
         Console.WriteLine(result);
         history.AddUserMessage(input);
         history.AddAssistantMessage(result);
+
+        Console.WriteLine("Where would you like to go?");
+        input = Console.ReadLine();
+
+        result = await kernel.InvokeAsync<string>(prompts["SuggestActivities"],
+            new() {
+                { "history", history },
+                { "destination", input },
+            }
+        );
+        Console.WriteLine(result);
     }
 
     private static async Task SuggestChordsPromptExample(Kernel kernel)
